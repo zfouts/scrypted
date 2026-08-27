@@ -212,6 +212,16 @@ addSupportedType({
         if (isHksvWebRTCEnabled(storage)) {
             try {
                 await addHksvWebRTCServices(accessory, device, console, storage, homekitPlugin);
+
+                // Experimental: the HKSV guide replaces the legacy RTP Stream Management service
+                // rather than sitting beside it. iOS 27 was observed preferring the legacy
+                // service when both are advertised, so allow removing it to force WebRTC.
+                if (storage.getItem('hksvWebRTCExclusive') === 'true') {
+                    const legacy = accessory.services.filter(s => s.UUID === Service.CameraRTPStreamManagement.UUID);
+                    for (const s of legacy)
+                        accessory.removeService(s);
+                    console.warn(`iOS 27 exclusive mode: removed ${legacy.length} legacy RTP Stream Management services. Devices older than iOS 27 (and Apple Watch) can not stream this camera.`);
+                }
             }
             catch (e) {
                 console.error('Failed to add HKSV WebRTC services', e);

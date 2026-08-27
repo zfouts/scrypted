@@ -104,6 +104,15 @@ ${this.storageSettings.values.qrCode}
         });
 
         settings.push({
+            title: 'iOS 27 Exclusive (remove legacy streaming)',
+            subgroup: 'iOS 27',
+            key: 'hksvWebRTCExclusive',
+            description: 'Experimental. Remove the legacy HomeKit RTP streaming services so iOS 27 must use WebRTC. Breaks live view on devices older than iOS 27 and on Apple Watch. Reload the HomeKit plugin after changing.',
+            value: this.storage.getItem('hksvWebRTCExclusive') === 'true',
+            type: 'boolean',
+        });
+
+        settings.push({
             title: 'Transcode to HEVC (libx265)',
             subgroup: 'iOS 27',
             key: 'hksvWebRTCTranscodeHevc',
