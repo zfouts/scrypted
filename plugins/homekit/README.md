@@ -90,3 +90,7 @@ For Linux users, Avahi should provide the best experience.
 Note that your system must have the `avahi-daemon` and `dbus` services installed and running for this option to work.
 
 If using Scypted through `docker compose`, be sure to uncomment the volume mounts to expose Avahi to the container.
+
+## iOS 27 WebRTC / HEVC Streaming (Experimental)
+
+iOS 27 introduces a WebRTC based live view with HEVC (H.265) support, enabling 4K and 2K streams. Enable "iOS 27 WebRTC Streaming" in the camera's HomeKit settings to advertise it. See `notes/ios27-webrtc.md` for details and limitations.

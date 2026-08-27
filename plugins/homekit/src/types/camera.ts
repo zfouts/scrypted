@@ -6,6 +6,7 @@ import type { HomeKitPlugin } from '../main';
 import { handleFragmentsRequests, iframeIntervalSeconds } from './camera/camera-recording';
 import { createCameraStreamingDelegate } from './camera/camera-streaming';
 import { FORCE_OPUS } from './camera/camera-utils';
+import { addHksvWebRTCServices, isHksvWebRTCEnabled } from './camera/hksv-webrtc';
 import { makeAccessory, mergeOnOffDevicesByType } from './common';
 
 const { deviceManager, systemManager } = sdk;
@@ -205,6 +206,17 @@ addSupportedType({
         });
 
         accessory.configureController(controller);
+
+        // iOS 27+: WebRTC live view (HEVC/H.264 + Opus) per the HKSV Open Source Compatibility Guide.
+        // Opt in per camera; the legacy SRTP path above remains for older controllers.
+        if (isHksvWebRTCEnabled(storage)) {
+            try {
+                await addHksvWebRTCServices(accessory, device, console, storage, homekitPlugin);
+            }
+            catch (e) {
+                console.error('Failed to add HKSV WebRTC services', e);
+            }
+        }
 
         if (controller.motionService) {
             const motionDevice = device;

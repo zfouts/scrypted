@@ -85,13 +85,23 @@ ${this.storageSettings.values.qrCode}
     async getMixinSettings(): Promise<Setting[]> {
         const settings: Setting[] = [];
 
-        // settings.push({
-        //     title: 'H265 Streams',
-        //     key: 'h265Support',
-        //     description: 'Camera outputs h265 codec streams.',
-        //     value: (this.storage.getItem('h265Support') === 'true').toString(),
-        //     type: 'boolean',
-        // });
+        settings.push({
+            title: 'iOS 27 WebRTC Streaming',
+            subgroup: 'iOS 27',
+            key: 'hksvWebRTC',
+            description: 'Advertise the iOS 27 HomeKit camera WebRTC live view (HEVC/H.264 + Opus) in addition to legacy SRTP streaming. Requires iOS/tvOS 27 or newer on the home hub and viewing devices. Reload the HomeKit plugin after changing.',
+            value: this.storage.getItem('hksvWebRTC') === 'true',
+            type: 'boolean',
+        });
+
+        settings.push({
+            title: 'Prefer HEVC (H.265)',
+            subgroup: 'iOS 27',
+            key: 'hksvWebRTCPreferH265',
+            description: 'Offer HEVC as the primary WebRTC video codec (recommended for 4K/2K cameras). H.264 is always offered as a fallback.',
+            value: this.storage.getItem('hksvWebRTCPreferH265') !== 'false',
+            type: 'boolean',
+        });
 
         settings.push({
             title: 'RTP Sender',
