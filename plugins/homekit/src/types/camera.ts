@@ -6,7 +6,8 @@ import type { HomeKitPlugin } from '../main';
 import { handleFragmentsRequests, iframeIntervalSeconds } from './camera/camera-recording';
 import { createCameraStreamingDelegate } from './camera/camera-streaming';
 import { FORCE_OPUS } from './camera/camera-utils';
-import { addHksvWebRTCServices, isHksvWebRTCEnabled } from './camera/hksv-webrtc';
+import { addHksvWebRTCServices, buildTiers, getSensorDimensions, getSensorUUID, isHksvWebRTCEnabled, isMultiTierRtpEnabled } from './camera/hksv-webrtc';
+import { addMultiTierRtpService } from './camera/multi-tier-rtp';
 import { makeAccessory, mergeOnOffDevicesByType } from './common';
 
 const { deviceManager, systemManager } = sdk;
@@ -212,6 +213,15 @@ addSupportedType({
         if (isHksvWebRTCEnabled(storage)) {
             try {
                 await addHksvWebRTCServices(accessory, device, console, storage, homekitPlugin);
+
+                // iOS 27 will not treat the accessory as a camera without an RTP stream management
+                // service. The new spec's replacement is Multi-Tier RTP (0x8031), which carries the
+                // HEVC tiers. This is what LAN live view is expected to use.
+                if (isMultiTierRtpEnabled(storage)) {
+                    const sensor = await getSensorDimensions(device, console);
+                    await addMultiTierRtpService(accessory, device, console, buildTiers(sensor), getSensorUUID(storage));
+                    console.log('iOS 27 Multi-Tier RTP (HEVC) stream management service added.');
+                }
 
                 // Experimental: the HKSV guide replaces the legacy RTP Stream Management service
                 // rather than sitting beside it. iOS 27 was observed preferring the legacy

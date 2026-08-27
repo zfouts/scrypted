@@ -104,10 +104,19 @@ ${this.storageSettings.values.qrCode}
         });
 
         settings.push({
+            title: 'iOS 27 Multi-Tier RTP (HEVC)',
+            subgroup: 'iOS 27',
+            key: 'hksvMultiTierRtp',
+            description: 'Advertise the iOS 27 Multi-Tier RTP stream management service, which streams HEVC over SRTP with quality tiers. iOS 27 requires an RTP stream management service to treat the accessory as a camera. Reload the HomeKit plugin after changing.',
+            value: this.storage.getItem('hksvMultiTierRtp') === 'true',
+            type: 'boolean',
+        });
+
+        settings.push({
             title: 'iOS 27 Exclusive (remove legacy streaming)',
             subgroup: 'iOS 27',
             key: 'hksvWebRTCExclusive',
-            description: 'Experimental. Remove the legacy HomeKit RTP streaming services so iOS 27 must use WebRTC. Breaks live view on devices older than iOS 27 and on Apple Watch. Reload the HomeKit plugin after changing.',
+            description: 'Experimental. Remove the legacy HomeKit RTP streaming services. Only use together with Multi-Tier RTP: without any RTP stream management service, iOS 27 stops showing the accessory as a camera. Breaks live view on devices older than iOS 27 and on Apple Watch.',
             value: this.storage.getItem('hksvWebRTCExclusive') === 'true',
             type: 'boolean',
         });

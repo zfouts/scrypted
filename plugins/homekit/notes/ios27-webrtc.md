@@ -20,7 +20,7 @@ Spec: https://developer.apple.com/download/files/HomeKit-Secure-Video-Open-Sourc
 | 4.21 | WebRTC Reoffer | implemented (standard renegotiation) |
 | 4.22 | WebRTC Update Session | accepted as a no-op (SFrame keys) |
 | 4.23/4.24 | WebRTC Supported Video/Audio Stream Tiers | implemented; High/Medium/Low derived from the sensor size |
-| 3.6 | Camera Multi-Tier RTP Stream Management (`8031`) | not implemented |
+| 3.6 | Camera Multi-Tier RTP Stream Management (`8031`) | implemented (HEVC + Opus over SRTP, tier selection) |
 | 3.5/3.9/3.10 | CMAF recording (Buffer/Key/Client Certificate Management) | not implemented; legacy HKSV HDS recording is unchanged |
 | 4.17 | SFrame end-to-end encryption | not implemented; DTLS-SRTP only, no SFrame Configuration is returned |
 
@@ -43,11 +43,32 @@ Scrypted's own WebRTC clients:
 * The camera console logs `HKSV WebRTC negotiated codecs` with the codec the session is sending, and
   `Transcoding to HEVC with libx265` when the transcoder is active.
 
+## Why Multi-Tier RTP is needed
+
+Testing on iOS 27 showed the WebRTC service alone is not enough. With the legacy RTP Stream
+Management services removed and only the WebRTC service present, the Home app stopped showing the
+accessory as a camera at all (it appeared as a motion sensor) and never solicited an offer. With
+the legacy services present, the controller configured the new operating-mode and WebRTC services
+but still opened live view through the legacy `Setup Endpoints` path.
+
+The conclusion is that iOS requires *an* RTP stream management service to treat the accessory as a
+camera, and in the new spec that service is Multi-Tier RTP (`8031`). It is implemented here using
+the standard HAP Setup Endpoints negotiation, with the new tier characteristics and RTP Streaming
+Control, and streams HEVC using the existing SRTP sender plus the H.265 repacketizer.
+
 ## Enabling
 
-Per camera, in the HomeKit mixin settings: "iOS 27 WebRTC Streaming" (off by default) and
-"Prefer HEVC (H.265)" (on by default). Reload the HomeKit plugin afterwards. Cameras must be
-paired in Accessory Mode; the services are added to the camera accessory.
+Per camera, in the HomeKit mixin settings (all off by default except Prefer HEVC):
+
+* **iOS 27 WebRTC Streaming** - adds the Camera Capabilities, Global Operating Mode and WebRTC
+  services.
+* **iOS 27 Multi-Tier RTP (HEVC)** - adds the `8031` service. This is the one expected to carry
+  LAN live view in HEVC.
+* **iOS 27 Exclusive** - removes the legacy RTP services. Only use together with Multi-Tier RTP;
+  on its own it makes the camera disappear from the Home app's camera view.
+* **Prefer HEVC (H.265)** / **Transcode to HEVC (libx265)**.
+
+Reload the HomeKit plugin afterwards. Cameras must be paired in Accessory Mode.
 
 ## Open questions / assumptions
 

@@ -3,7 +3,8 @@ import { RtpPacket } from '@koush/werift-src/packages/rtp/src/rtp/rtp';
 import type { Config } from '@koush/werift-src/packages/rtp/src/srtp/session';
 import { SrtcpSession } from '@koush/werift-src/packages/rtp/src/srtp/srtcp';
 import { SrtpSession } from '@koush/werift-src/packages/rtp/src/srtp/srtp';
-import { getNaluTypesInNalu, H264_NAL_TYPE_IDR } from '@scrypted/common/src/rtsp-server';
+import { getNaluTypesInNalu, H264_NAL_TYPE_IDR, H265_NAL_TYPE_IDR_N_LP, H265_NAL_TYPE_IDR_W_RADL } from '@scrypted/common/src/rtsp-server';
+import { H265Repacketizer } from '../../../../webrtc/src/h265-packetizer';
 import dgram from 'dgram';
 import { AudioStreamingSamplerate } from '../../hap';
 import { ntpTime } from './camera-utils';
@@ -16,6 +17,9 @@ export function createCameraStreamSender(console: Console, config: Config, sende
         maxPacketSize: number,
         sps: Buffer,
         pps: Buffer,
+        vps?: Buffer,
+        // 'h264' (default) or 'h265'. Selects the RTP repacketizer.
+        codec?: 'h264' | 'h265',
     },
     audioOptions?: {
         audioPacketTime: number,
@@ -33,6 +37,7 @@ export function createCameraStreamSender(console: Console, config: Config, sende
     let firstSequenceNumber: number;
     let opusPacketizer: OpusRepacketizer;
     let h264Packetizer: H264Repacketizer;
+    let h265Packetizer: H265Repacketizer;
     let analyzeVideo = true;
 
     const loggedNaluTypes = new Set<number>();
@@ -63,7 +68,10 @@ export function createCameraStreamSender(console: Console, config: Config, sende
         if (videoOptions.maxPacketSize) {
             // adjust packet size for the rtp packet header (12).
             const adjustedMtu = videoOptions.maxPacketSize - 12;
-            h264Packetizer = new H264Repacketizer(console, adjustedMtu, videoOptions);
+            if (videoOptions.codec === 'h265')
+                h265Packetizer = new H265Repacketizer(console, adjustedMtu, { sps: videoOptions.sps, pps: videoOptions.pps, vps: videoOptions.vps });
+            else
+                h264Packetizer = new H264Repacketizer(console, adjustedMtu, videoOptions);
         }
         sender.setSendBufferSize(1024 * 1024);
     }
@@ -144,6 +152,15 @@ export function createCameraStreamSender(console: Console, config: Config, sende
                 rtp.header.timestamp = (firstTimestamp + packetCount * 160 * audioIntervalScale) % 0xFFFFFFFF;
                 sendPacket(rtp);
             }
+            return;
+        }
+
+        if (h265Packetizer) {
+            const packets = h265Packetizer.repacketize(rtp);
+            if (!packets?.length)
+                return;
+            for (const packet of packets)
+                sendPacket(packet);
             return;
         }
 

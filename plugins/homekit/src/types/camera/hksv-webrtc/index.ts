@@ -54,7 +54,7 @@ const TIER_ID_MEDIUM = 2;
 const TIER_ID_LOW = 3;
 const AUDIO_TIER_ID = 1;
 
-interface VideoTier {
+export interface VideoTier {
     id: number;
     quality: HksvVideoQuality;
     width: number;
@@ -150,7 +150,11 @@ export function isHksvWebRTCEnabled(storage: Storage) {
     return getStorageBoolean(storage, 'hksvWebRTC', false);
 }
 
-function getSensorUUID(storage: Storage) {
+export function isMultiTierRtpEnabled(storage: Storage) {
+    return getStorageBoolean(storage, 'hksvMultiTierRtp', false);
+}
+
+export function getSensorUUID(storage: Storage) {
     let hex = storage.getItem('hksvSensorUUID');
     if (!hex) {
         hex = crypto.randomBytes(16).toString('hex');
@@ -168,7 +172,7 @@ function stableUUID(storage: Storage, key: string) {
     return Buffer.from(hex, 'hex');
 }
 
-async function getSensorDimensions(device: ScryptedDevice & VideoCamera, console: Console) {
+export async function getSensorDimensions(device: ScryptedDevice & VideoCamera, console: Console) {
     let width = 3840;
     let height = 2160;
     try {
@@ -194,7 +198,7 @@ async function getSensorDimensions(device: ScryptedDevice & VideoCamera, console
 }
 
 // Section 2: three encodings per sensor. Tiers are derived from the sensor size, keeping aspect ratio.
-function buildTiers(sensor: { width: number, height: number }): VideoTier[] {
+export function buildTiers(sensor: { width: number, height: number }): VideoTier[] {
     const aspect = sensor.width / sensor.height;
     const even = (n: number) => Math.round(n / 2) * 2;
     const make = (id: number, quality: HksvVideoQuality, height: number, fps: number): VideoTier => {
