@@ -37,6 +37,11 @@ Scrypted's own WebRTC clients:
 * Audio is Opus at 48 kHz. Two way audio uses the `sendrecv` audio transceiver and starts the
   Scrypted intercom on the first inbound RTP packet.
 * Payload types are pinned (H265=100, H264=102, Opus=111) so the tier characteristics match the SDP.
+* "Transcode to HEVC (libx265)" (off by default) encodes H.264 sources to HEVC when the controller
+  negotiated H265: full resolution, source frame rate, bitrate from the spec's tier table. This is
+  CPU intensive; configuring the camera itself to output H.265 is the better option.
+* The camera console logs `HKSV WebRTC negotiated codecs` with the codec the session is sending, and
+  `Transcoding to HEVC with libx265` when the transcoder is active.
 
 ## Enabling
 

@@ -217,6 +217,9 @@ addSupportedType({
                 console.error('Failed to add HKSV WebRTC services', e);
             }
         }
+        else {
+            console.log('iOS 27 WebRTC streaming is disabled for this camera. Enable "iOS 27 WebRTC Streaming" in the HomeKit settings and reload the plugin to use it.');
+        }
 
         if (controller.motionService) {
             const motionDevice = device;

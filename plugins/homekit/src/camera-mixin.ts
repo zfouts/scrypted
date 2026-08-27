@@ -104,6 +104,15 @@ ${this.storageSettings.values.qrCode}
         });
 
         settings.push({
+            title: 'Transcode to HEVC (libx265)',
+            subgroup: 'iOS 27',
+            key: 'hksvWebRTCTranscodeHevc',
+            description: 'Encode H.264 (or other) sources to HEVC with libx265 for iOS 27 WebRTC sessions. CPU intensive; prefer configuring the camera itself to output H.265 when possible.',
+            value: this.storage.getItem('hksvWebRTCTranscodeHevc') === 'true',
+            type: 'boolean',
+        });
+
+        settings.push({
             title: 'RTP Sender',
             subgroup: 'Debug',
             key: 'rtpSender',

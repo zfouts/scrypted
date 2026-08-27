@@ -324,11 +324,13 @@ export async function addHksvWebRTCServices(
     const sensor = await getSensorDimensions(device, console);
     const tiers = buildTiers(sensor);
     const preferH265 = getStorageBoolean(storage, 'hksvWebRTCPreferH265', true);
+    const hevcTranscode = getStorageBoolean(storage, 'hksvWebRTCTranscodeHevc', false);
 
     console.log('HKSV WebRTC (iOS 27) streaming enabled', {
         sensor,
         tiers,
         preferH265,
+        hevcTranscode,
         twoWayAudio,
     });
 
@@ -421,6 +423,12 @@ export async function addHksvWebRTCServices(
             audioTransceiver,
             maximumCompatibilityMode: false,
             clientOptions: homeKitClientOptions,
+            hevcTranscode,
+        });
+        console.log('HKSV WebRTC negotiated codecs', {
+            video: videoTransceiver.codecs.map(c => `${c.mimeType}/${c.payloadType}`),
+            sending: `${videoTransceiver.sender.codec?.mimeType}/${videoTransceiver.sender.codec?.payloadType}`,
+            audio: audioTransceiver.codecs.map(c => `${c.mimeType}/${c.payloadType}`),
         });
         if (!forwarder) {
             closeSession(session, 'no media stream');

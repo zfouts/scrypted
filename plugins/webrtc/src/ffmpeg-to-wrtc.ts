@@ -28,6 +28,25 @@ function getDebugModeH264EncoderArgs() {
     ];
 }
 
+// full resolution, source frame rate, bitrate from Apple's HKSV tier table (peak kbps by height).
+function getHevcEncoderArgs(height: number | undefined) {
+    const h = height || 1080;
+    const kbps = h >= 2160 ? 5000 : h >= 1440 ? 3000 : h >= 1080 ? 1800 : h >= 720 ? 800 : 190;
+    const bitrate = kbps * 1000;
+    return [
+        '-c:v', 'libx265',
+        '-preset', 'ultrafast',
+        '-tune', 'zerolatency',
+        // repeat VPS/SPS/PPS on every keyframe so a viewer can join mid stream. 2s gop at 30fps.
+        '-x265-params', 'keyint=60:min-keyint=60:repeat-headers=1:bframes=0:scenecut=0:rc-lookahead=0',
+        '-pix_fmt', 'yuv420p',
+        '-bf', '0',
+        '-b:v', bitrate.toString(),
+        '-maxrate', bitrate.toString(),
+        '-bufsize', (2 * bitrate).toString(),
+    ];
+}
+
 const fullResolutionAllowList = [
     'Windows',
     'Macintosh',
@@ -42,6 +61,11 @@ export async function createTrackForwarder(options: {
     requestMediaStream: RequestMediaStream,
     videoTransceiver: RTCRtpTransceiver, audioTransceiver: RTCRtpTransceiver,
     maximumCompatibilityMode: boolean, clientOptions: RTCSignalingOptions,
+    /**
+     * Encode non-HEVC sources to HEVC with libx265 when the peer negotiated H265.
+     * Sources that are already HEVC are passed through untouched.
+     */
+    hevcTranscode?: boolean,
 }) {
     const {
         timeStart,
@@ -181,9 +205,16 @@ export async function createTrackForwarder(options: {
     const { name: audioCodecName } = getAudioCodec(audioTransceiver.sender.codec);
     let audioCodecCopy = maximumCompatibilityMode ? undefined : audioCodecName;
 
+    // opt in libx265 encode for sources that are not already HEVC (used by the HomeKit iOS 27 path).
+    const transcodeHevc = !!options.hevcTranscode
+        && hasH265Support
+        && !transcodeBaseline
+        && mediaStreamOptions?.video?.codec !== 'h265';
+
     const videoTranscodeArguments: string[] = [];
     const transcode = transcodeBaseline
-        || willNeedTranscode;
+        || willNeedTranscode
+        || transcodeHevc;
 
     // let videoCodecCopy: RtpCodecCopy = transcode ? undefined : 'h264';
     const compatibleH264 = !mediaStreamOptions?.video?.h264Info?.reserved30 && !mediaStreamOptions?.video?.h264Info?.reserved31;
@@ -198,7 +229,16 @@ export async function createTrackForwarder(options: {
     if (ffmpegInput.mediaStreamOptions?.oobCodecParameters)
         videoTranscodeArguments.push("-bsf:v", "dump_extra");
 
-    if (transcode) {
+    if (transcodeHevc) {
+        findAndSetCodec(videoTransceiver, 'video/H265');
+        videoTranscodeArguments.push(...getHevcEncoderArgs(mediaStreamOptions?.video?.height));
+        console.log('Transcoding to HEVC with libx265', {
+            sourceCodec: mediaStreamOptions?.video?.codec,
+            width: mediaStreamOptions?.video?.width,
+            height: mediaStreamOptions?.video?.height,
+        });
+    }
+    else if (transcode) {
         const conservativeDefaultBitrate = isLocalNetwork ? 1000000 : 500000;
         const bitrate = maximumCompatibilityMode ? conservativeDefaultBitrate : conservativeDefaultBitrate;
         videoTranscodeArguments.push(
